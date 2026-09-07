@@ -1,0 +1,150 @@
+// Test of LNIT::misc::StridedView: iterator/sentinel model, C++20 range concepts
+// and iteration results over several kinds of underlying ranges.
+//
+// No test framework dependency: CHECK() reports and fails the process, and is
+// not compiled out in Release builds (unlike assert()).
+
+#include <LNIT/misc/StridedView.hpp>
+
+#include <array>
+#include <cstdio>
+#include <cstdlib>
+#include <forward_list>
+#include <list>
+#include <vector>
+
+namespace
+{
+
+int g_failures = 0;
+
+#define CHECK(cond)                                                                        \
+	do                                                                                     \
+	{                                                                                      \
+		if (!(cond))                                                                       \
+		{                                                                                  \
+			std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond);  \
+			++g_failures;                                                                  \
+		}                                                                                  \
+	} while (false)
+
+using LNIT::misc::stride;
+
+template<class V>
+void checkConcepts()
+{
+	using Iterator      = decltype(std::declval<V&>().begin());
+	using ConstIterator = decltype(std::declval<const V&>().begin());
+	using Sentinel      = typename V::Sentinel;
+
+	static_assert(std::input_iterator<Iterator>);
+	static_assert(std::input_iterator<ConstIterator>);
+	static_assert(std::sentinel_for<Sentinel, Iterator>);
+	static_assert(std::sentinel_for<Sentinel, ConstIterator>);
+	static_assert(std::ranges::input_range<V>);
+	static_assert(std::ranges::input_range<const V>);
+	static_assert(std::ranges::view<V>);
+}
+
+template<class Range>
+std::vector<double> collect(Range&& range)
+{
+	std::vector<double> out;
+	for (auto&& x : range) { out.push_back(static_cast<double>(x)); }
+	return out;
+}
+
+using Values = std::vector<double>;
+
+void testRandomAccess()
+{
+	Values v{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+	auto sv = stride<2>(v);
+	checkConcepts<decltype(sv)>();
+	CHECK((collect(sv) == Values{0, 2, 4, 6, 8}));
+
+	const auto& csv = sv;
+	CHECK((collect(csv) == Values{0, 2, 4, 6, 8}));
+
+	// length not a multiple of the stride: the last step must stop at end()
+	CHECK((collect(stride<3>(v))  == Values{0, 3, 6, 9}));
+	CHECK((collect(stride<4>(v))  == Values{0, 4, 8}));
+	CHECK((collect(stride<7>(v))  == Values{0, 7}));
+	CHECK((collect(stride<10>(v)) == Values{0}));
+	CHECK((collect(stride<11>(v)) == Values{0}));
+	CHECK((collect(stride<1>(v))  == v));
+
+	Values empty;
+	CHECK(collect(stride<2>(empty)).empty());
+
+	// std::array from a const source
+	const std::array<int, 5> a{1, 2, 3, 4, 5};
+	CHECK((collect(stride<2>(a)) == Values{1, 3, 5}));
+
+	// the non-const iterator must yield mutable references
+	for (auto& x : stride<2>(v)) { x = -x; }
+	CHECK((v == Values{0, 1, -2, 3, -4, 5, -6, 7, -8, 9}));
+}
+
+void testBidirectional()
+{
+	std::list<int> l{0, 1, 2, 3, 4, 5, 6};
+
+	auto sl = stride<3>(l);
+	checkConcepts<decltype(sl)>();
+	CHECK((collect(sl) == Values{0, 3, 6}));
+	CHECK((collect(stride<2>(l)) == Values{0, 2, 4, 6}));
+	CHECK((collect(stride<4>(l)) == Values{0, 4}));
+}
+
+void testForwardOnly()
+{
+	std::forward_list<int> f{0, 1, 2, 3, 4};
+
+	auto sf = stride<2>(f);
+	checkConcepts<decltype(sf)>();
+	CHECK((collect(sf) == Values{0, 2, 4}));
+	CHECK((collect(stride<3>(f)) == Values{0, 3}));
+}
+
+void testIteratorAndSentinel()
+{
+	Values v{0, 1, 2, 3};
+	auto sv = stride<2>(v);
+
+	auto it  = sv.begin();
+	auto old = it++;
+	CHECK(*old == 0);
+	CHECK(*it == 2);
+
+	// comparison with the sentinel, both operand orders, == and !=
+	CHECK(!(it == std::default_sentinel));
+	CHECK(it != std::default_sentinel);
+	CHECK(!(std::default_sentinel == it));
+	CHECK(std::default_sentinel != it);
+
+	++it;
+	CHECK(it == std::default_sentinel);
+	CHECK(std::default_sentinel == it);
+
+	static_assert(std::ranges::borrowed_range<decltype(stride<2>(v))>);
+}
+
+} // namespace
+
+int main()
+{
+	testRandomAccess();
+	testBidirectional();
+	testForwardOnly();
+	testIteratorAndSentinel();
+
+	if (g_failures != 0)
+	{
+		std::fprintf(stderr, "test_StridedView: %d check(s) failed\n", g_failures);
+		return EXIT_FAILURE;
+	}
+	std::puts("test_StridedView: all checks passed");
+	return EXIT_SUCCESS;
+}
