@@ -17,3 +17,4 @@ endfunction()
 
 lnit_add_test(test_StridedView)
 lnit_add_test(test_ClenshawCurtisTables   LNIT)
+lnit_add_test(test_AdaptiveQuadratureBase LNIT)

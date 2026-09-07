@@ -18,7 +18,6 @@ namespace LNIT
 template<class Derived>
 AdaptiveQuadratureBase<Derived>::AdaptiveQuadratureBase(const Size& maxIt, const Scalar& relativeTol, const Scalar& absoluteTol) 
 	: m_maxIt(maxIt)
-	, m_it(0)
 	, m_relativeTol(relativeTol)
 	, m_absoluteTol(absoluteTol) 
 { 
@@ -27,19 +26,36 @@ AdaptiveQuadratureBase<Derived>::AdaptiveQuadratureBase(const Size& maxIt, const
 	m_subIntergralsErr.reserve(maxIt);
 }
 
+template<class Derived>
+constexpr void AdaptiveQuadratureBase<Derived>::resetState()
+{
+	m_hasConverged = false;
+	m_it = 0;
+	m_intervals.clear();
+	m_subIntergrals.clear();
+	m_subIntergralsErr.clear();
+}
+
 template<class Derived> template<class Function> 
 auto AdaptiveQuadratureBase<Derived>::integrate(const Function& f, const Scalar& xmin, const Scalar& xmax) -> LongScalar
 {	
 	using std::ceil;
 	using std::abs;
 	using std::isfinite;
+	using std::isnan;
+	using std::isinf;
 	
 	using const_Iterator = typename std::vector<LongScalar>::const_iterator;
 	
-	m_hasConverged = false;
-	m_intervals.clear();
-	m_subIntergrals.clear();
-	m_subIntergralsErr.clear();
+	// bounds: see the documentation of this method
+	if (isnan(xmin) or isnan(xmax))  { resetState(); return NumTraits<LongScalar>::NaN; }
+	if (xmin > xmax)                 { return -integrate(f, xmax, xmin); }
+	if (xmin == xmax)                { resetState(); m_hasConverged = true; return LongScalar{}; }
+	if (isinf(xmin) and isinf(xmax)) { return integrate(f); }
+	if (isinf(xmin))                 { return integrateLeftInfinite(f, xmax); }
+	if (isinf(xmax))                 { return integrateRightInfinite(f, xmin); }
+	
+	resetState();
 
 	LongScalar res;
 	LongScalar estimatedErr;
@@ -110,7 +126,8 @@ auto AdaptiveQuadratureBase<Derived>::integrateLeftInfinite(const Function& f, c
 		xmin *= 2;
 		leftIntegral = gLaguerreQuad.integrateLeftInfinite(f, xmin);
 	}
-	return isfinite(leftIntegral) ? integrate(f, xmin, xmax) : NumTraits<LongScalar>::NaN;
+	if (not isfinite(leftIntegral)) { resetState(); return NumTraits<LongScalar>::NaN; }
+	return integrate(f, xmin, xmax);
 }
 
 template<class Derived> template<class Function>
@@ -128,7 +145,8 @@ auto AdaptiveQuadratureBase<Derived>::integrateRightInfinite(const Function& f, 
 		xmax *= 2;
 		rightIntegral = gLaguerreQuad.integrateRightInfinite(f, xmax);
 	}
-	return isfinite(rightIntegral) ? integrate(f, xmin, xmax) : NumTraits<LongScalar>::NaN;
+	if (not isfinite(rightIntegral)) { resetState(); return NumTraits<LongScalar>::NaN; }
+	return integrate(f, xmin, xmax);
 }
 
 template<class Derived> template<class Function>
@@ -147,7 +165,8 @@ auto AdaptiveQuadratureBase<Derived>::integrate(const Function& f) -> LongScalar
 		leftIntegral = gLaguerreQuad.integrateLeftInfinite(f, xmin);
 	}
 	
-	return isfinite(leftIntegral) ? integrateRightInfinite(f, xmin) : NumTraits<LongScalar>::NaN;
+	if (not isfinite(leftIntegral)) { resetState(); return NumTraits<LongScalar>::NaN; }
+	return integrateRightInfinite(f, xmin);
 }
 
 template<class Derived> template<class Function>
