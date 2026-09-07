@@ -29,7 +29,7 @@ constexpr LongScalar GaussHermiteQuadrature<Scalar, LongScalar>::integrate(const
 		return f(x); 
 	});
 
-	return std::inner_product(s_wi.begin(), s_wi.end(), fx.end(), LongScalar{});	
+	return std::inner_product(s_wi.begin(), s_wi.end(), fx.begin(), LongScalar{});	
 }
 
 } // namespace LNIT

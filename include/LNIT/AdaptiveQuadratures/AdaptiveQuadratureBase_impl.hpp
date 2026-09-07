@@ -79,7 +79,7 @@ auto AdaptiveQuadratureBase<Derived>::integrate(const Function& f, const Scalar&
 		const const_Iterator maxErrIt = std::ranges::max_element(m_subIntergralsErr);
 		const Size maxErrIdx = Size(std::ranges::distance(m_subIntergralsErr.begin(), maxErrIt));
 		// we split it in two
-		const auto& [a, b] = m_intervals[maxErrIdx];
+		const auto [a, b] = m_intervals[maxErrIdx]; // copy: the entry is overwritten just below
 		
 		Scalar midPoint = std::midpoint(a, b); // non-const because I want to move it when I do not need it.
 		// first interval

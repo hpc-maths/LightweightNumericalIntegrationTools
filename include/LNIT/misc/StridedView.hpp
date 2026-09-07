@@ -30,7 +30,7 @@ public:
 	public:	
 		using difference_type   = std::iter_difference_t<InnerIterator>;
 		using value_type        = std::iter_value_t<InnerIterator>;
-		using reference         = std::conditional_t<isConst, Reference, const_Reference>;
+		using reference         = std::conditional_t<isConst, const_Reference, Reference>;
 		using iterator_category = std::input_iterator_tag;	
 
 		Iterator(const InnerIterator first, const InnerSentinel bound) : m_current(first), m_bound(bound) {}
@@ -43,7 +43,7 @@ public:
 
 		friend constexpr bool operator==(const Iterator& it, const Sentinel /* sentinel */) { return it.isDone(); }
 	private:
-		constexpr bool isDone();
+		constexpr bool isDone() const;
 
 		constexpr void next();
 
