@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <forward_list>
 #include <list>
+#include <sstream>
 #include <vector>
 
 namespace
@@ -108,6 +109,20 @@ void testForwardOnly()
 	CHECK((collect(stride<3>(f)) == Values{0, 3}));
 }
 
+void testSinglePassInput()
+{
+	// a pure input range: the view must not consume it before iteration
+	// (e.g. by calling std::ranges::distance in its constructor)
+	std::istringstream in("0 1 2 3 4 5 6");
+	auto si = stride<3>(std::views::istream<int>(in));
+	static_assert(std::ranges::input_range<decltype(si)>);
+	static_assert(std::ranges::view<decltype(si)>);
+	CHECK((collect(si) == Values{0, 3, 6}));
+
+	std::istringstream in2("0 1 2 3 4");
+	CHECK((collect(stride<2>(std::views::istream<int>(in2))) == Values{0, 2, 4}));
+}
+
 void testIteratorAndSentinel()
 {
 	Values v{0, 1, 2, 3};
@@ -138,6 +153,7 @@ int main()
 	testRandomAccess();
 	testBidirectional();
 	testForwardOnly();
+	testSinglePassInput();
 	testIteratorAndSentinel();
 
 	if (g_failures != 0)

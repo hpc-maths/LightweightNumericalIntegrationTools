@@ -2,6 +2,7 @@
 #define LNIT_MISC_STRIDED_VIEW_HPP
 
 #include <ranges>
+#include <utility>
 
 namespace LNIT::misc
 {
@@ -33,13 +34,15 @@ public:
 		using reference         = std::conditional_t<isConst, const_Reference, Reference>;
 		using iterator_category = std::input_iterator_tag;	
 
-		Iterator(const InnerIterator first, const InnerSentinel bound) : m_current(first), m_bound(bound) {}
+		constexpr Iterator(InnerIterator first, InnerSentinel bound) : m_current(std::move(first)), m_bound(std::move(bound)) {}
 
 		constexpr reference operator*() const { return *m_current; }
 
 		constexpr Iterator& operator++() { next(); return *this; }
 		
-		constexpr Iterator operator++(int) { Iterator ret(*this); ++(*this); return ret; }
+		// postfix increment returns a copy when the inner iterator is copyable, void otherwise (single-pass ranges)
+		constexpr Iterator operator++(int) requires std::copyable<InnerIterator> { Iterator ret(*this); ++(*this); return ret; }
+		constexpr void     operator++(int) { next(); }
 
 		friend constexpr bool operator==(const Iterator& it, const Sentinel /* sentinel */) { return it.isDone(); }
 	private:
@@ -51,7 +54,7 @@ public:
 		InnerSentinel m_bound;
 	};
 
-	constexpr StridedView(View&& view) : m_view(std::forward<View>(view)), m_bound(stride*(std::ranges::distance(m_view) / stride)) {}
+	constexpr StridedView(View&& view) : m_view(std::forward<View>(view)) {}
 
 	constexpr Iterator<false> begin() { return Iterator<false>(std::ranges::begin(m_view), std::ranges::end(m_view)); }
 
@@ -62,11 +65,10 @@ public:
 	constexpr Sentinel end() const { return {}; }
 private:
 	View m_view;
-	std::ptrdiff_t m_bound;
 };
 
 template<std::ptrdiff_t Tstride, std::ranges::input_range Range>
-constexpr StridedView<Tstride, std::views::all_t<Range>> stride(Range&& range) { return StridedView<Tstride, std::views::all_t<Range>>(std::views::all(range)); }
+constexpr StridedView<Tstride, std::views::all_t<Range>> stride(Range&& range) { return StridedView<Tstride, std::views::all_t<Range>>(std::views::all(std::forward<Range>(range))); }
 	
 } // namespace LNIT::misc
 
