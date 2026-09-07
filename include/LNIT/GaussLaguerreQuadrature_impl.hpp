@@ -22,7 +22,7 @@ constexpr LongScalar GaussLaguerreQuadrature<Scalar, LongScalar>::integrateLeftI
 {
 	const auto fx = s_xi | std::views::transform([&f, &a](const Scalar& x) -> LongScalar
 	{
-		return f(a - x); 
+		return static_cast<LongScalar>(f(a - x)); 
 	});
 
 	return std::inner_product(s_wi.begin(), s_wi.end(), fx.begin(), LongScalar{});	
@@ -33,7 +33,7 @@ constexpr LongScalar GaussLaguerreQuadrature<Scalar, LongScalar>::integrateRight
 {
 	const auto fx = s_xi | std::views::transform([&f, &a](const Scalar& x) -> LongScalar
 	{
-		return f(x + a); 
+		return static_cast<LongScalar>(f(x + a)); 
 	});
 
 	return std::inner_product(s_wi.begin(), s_wi.end(), fx.begin(), LongScalar{});	

@@ -53,13 +53,17 @@ public:
 	template<class Function> constexpr std::invoke_result_t<Function, Scalar> integrateImpl(const Function& f, const Scalar& xmin, const Scalar& xmax) const;
 	
 	constexpr Scalar getMaxDeltaXImpl(const Scalar& xmin, const Scalar& xmax) const { return (xmax - xmin)*misc::maxDiff(std::span{s_xi}); } 
+#ifdef LNIT_TESTING
+public: // quadrature tables exposed to the unit tests only
+#else
 private:
+#endif // LNIT_TESTING
 	std::array<LongScalar, 13> m_fx;
 
 	static constexpr std::array<Scalar, 13> s_wi = {
-		Scalar(0.0064102564102564102564), Scalar(0.067222926117575560019), Scalar(0.13037703037703037703  ), Scalar(0.18592888592888592889), Scalar(0.22580752580752580753), 
-		Scalar(0.25384119494654550410  ), Scalar(0.26082436082436082436 ), Scalar(0.25384119494654550410  ), Scalar(0.22580752580752580753), Scalar(0.18592888592888592889), 
-		Scalar(0.13037703037703037703  ), Scalar(0.067222926117575560019), Scalar(0.0064102564102564102564)};
+		Scalar(0.0069930069930069930070), Scalar(0.066057424952074394517 ), Scalar(0.13154253154253154253  ), Scalar(0.18476338476338476338  ), Scalar(0.22697302697302697303  ), 
+		Scalar(0.25267569378104433860  ), Scalar(0.26198986198986198986  ), Scalar(0.25267569378104433860  ), Scalar(0.22697302697302697303  ), Scalar(0.18476338476338476338  ), 
+		Scalar(0.13154253154253154253  ), Scalar(0.066057424952074394517 ), Scalar(0.0069930069930069930070)};
 	
 	static constexpr std::array<Scalar, 13> s_alternateWi = {
 		Scalar{}, Scalar(0.096656546636198874454), Scalar(0.055555555555555555556), Scalar(0.32275132275132275132), Scalar(0.026984126984126984127), Scalar(0.49805244807279583454 ), 

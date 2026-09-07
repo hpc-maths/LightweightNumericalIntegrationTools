@@ -1,8 +1,8 @@
 // Test of LNIT::misc::StridedView: iterator/sentinel model, C++20 range concepts
 // and iteration results over several kinds of underlying ranges.
 //
-// No test framework dependency: CHECK() reports and fails the process, and is
-// not compiled out in Release builds (unlike assert()).
+
+#include "Check.hpp"
 
 #include <LNIT/misc/StridedView.hpp>
 
@@ -14,20 +14,10 @@
 #include <sstream>
 #include <vector>
 
+using namespace LNIT::tests;
+
 namespace
 {
-
-int g_failures = 0;
-
-#define CHECK(cond)                                                                        \
-	do                                                                                     \
-	{                                                                                      \
-		if (!(cond))                                                                       \
-		{                                                                                  \
-			std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond);  \
-			++g_failures;                                                                  \
-		}                                                                                  \
-	} while (false)
 
 using LNIT::misc::stride;
 
@@ -156,11 +146,5 @@ int main()
 	testSinglePassInput();
 	testIteratorAndSentinel();
 
-	if (g_failures != 0)
-	{
-		std::fprintf(stderr, "test_StridedView: %d check(s) failed\n", g_failures);
-		return EXIT_FAILURE;
-	}
-	std::puts("test_StridedView: all checks passed");
-	return EXIT_SUCCESS;
+	return report("test_StridedView");
 }
