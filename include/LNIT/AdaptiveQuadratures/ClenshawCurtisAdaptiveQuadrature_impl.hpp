@@ -28,7 +28,7 @@ constexpr auto ClenshawCurtisAdaptiveQuadrature<T,TT>::estimateIntegralImpl(cons
 	const auto fx = s_xi | std::views::transform([&f, &xmin, &xmax](const Scalar& xi) -> LongScalar
 	{
 		const Scalar x = Scalar(0.5)*(xi*(xmax - xmin) + (xmax + xmin));
-		return f(x); 
+		return static_cast<LongScalar>(f(x)); 
 	});
 	std::ranges::copy(fx, std::begin(m_fx33));
 	

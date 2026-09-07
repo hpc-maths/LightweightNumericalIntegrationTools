@@ -26,10 +26,10 @@ constexpr LongScalar GaussHermiteQuadrature<Scalar, LongScalar>::integrate(const
 {
 	const auto fx = s_xi | std::views::transform([&f](const Scalar& x) -> LongScalar
 	{
-		return f(x); 
+		return static_cast<LongScalar>(f(x)); 
 	});
 
-	return std::inner_product(s_wi.begin(), s_wi.end(), fx.end(), LongScalar{});	
+	return std::inner_product(s_wi.begin(), s_wi.end(), fx.begin(), LongScalar{});	
 }
 
 } // namespace LNIT
