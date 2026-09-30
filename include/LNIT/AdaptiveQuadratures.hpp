@@ -3,3 +3,4 @@
 #include <LNIT/AdaptiveQuadratures/GaussLegendreAdaptiveQuadrature.hpp>
 #include <LNIT/AdaptiveQuadratures/GLCCAdaptiveQuadrature.hpp>
 
+#include <LNIT/VectorAdaptiveIntegration.hpp>
