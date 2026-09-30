@@ -27,13 +27,13 @@ constexpr auto GLCCAdaptiveQuadrature<T,TT>::estimateIntegralImpl(const Function
 	const auto fx_gl = s_xi_gl | std::views::transform([&f, &xmin, &xmax](const Scalar& xi) -> LongScalar
 	{
 		const Scalar x = Scalar(0.5)*(xi*(xmax - xmin) + (xmax + xmin));
-		return f(x); 
+		return static_cast<LongScalar>(f(x)); 
 	});
 	
 	const auto fx_cc = s_xi_cc | std::views::transform([&f, &xmin, &xmax](const Scalar& xi) -> LongScalar
 	{
 		const Scalar x = Scalar(0.5)*(xi*(xmax - xmin) + (xmax + xmin));
-		return f(x); 
+		return static_cast<LongScalar>(f(x)); 
 	});
 	
 	const LongScalar I_gl = LongScalar(0.5)*LongScalar(xmax - xmin)*std::inner_product(s_wi_gl.begin(), s_wi_gl.end(), fx_gl.begin(), LongScalar{});

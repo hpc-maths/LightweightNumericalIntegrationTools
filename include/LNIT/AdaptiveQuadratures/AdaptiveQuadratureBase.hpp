@@ -74,6 +74,12 @@ public:
 	 * @param xmin Lower bound of interval.
 	 * @param xmax Upper bound of interval.
 	 * @return Approximation of the integral.
+	 *
+	 * Bounds follow the usual conventions of the definite integral:
+	 * - xmin > xmax returns the opposite of the integral over [xmax, xmin];
+	 * - xmin == xmax returns 0 (converged);
+	 * - a NaN bound returns NaN (not converged);
+	 * - an infinite bound delegates to integrate(f), integrateLeftInfinite() or integrateRightInfinite().
 	 */
 	template<class Function> LongScalar integrate(const Function& f, const Scalar& xmin, const Scalar& xmax);
 	
@@ -168,15 +174,18 @@ public:
 	
 	constexpr std::span<const Interval> getSubIntervals() const { return m_intervals; }
 private:
+	/// Forgets the previous integration: no interval, no iteration, not converged.
+	constexpr void resetState();
+
 	std::vector<Interval>   m_intervals;
 	std::vector<LongScalar> m_subIntergrals;
 	std::vector<LongScalar> m_subIntergralsErr;
 
 	Size   m_maxIt;
-	Size   m_it;
+	Size   m_it           = 0;
 	Scalar m_relativeTol;
 	Scalar m_absoluteTol;
-	bool   m_hasConverged;
+	bool   m_hasConverged = false;
 	
 	std::FILE* m_out = nullptr;
 };

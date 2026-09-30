@@ -76,6 +76,7 @@ option(LNIT_BUILD_DEMO      "Build demo executable" OFF)
 option(LNIT_NATIVE_OPT      "Enable CPU-specific optimizations (-march=native -mtune=native)" OFF)
 option(LNIT_BUILD_BENCHMARK "Build benchmark executables" OFF)
 option(LNIT_BUILD_DOC       "Build Doxygen documentation" OFF)
+option(LNIT_BUILD_TESTS     "Build unit tests (run with ctest)" OFF)
 
 if(LNIT_CXX23)
 	set(CMAKE_CXX_STANDARD 23)
@@ -111,6 +112,12 @@ endif()
 # === Demo subdir ===
 if(LNIT_BUILD_DEMO)
     add_subdirectory(demo)
+endif()
+
+# === Tests subdir ===
+if(LNIT_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
 
 # === Benchmark subdir ===
