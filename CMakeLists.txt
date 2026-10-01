@@ -137,6 +137,8 @@ set(LNIT_SRC
 )
 
 add_library(LNIT STATIC ${LNIT_SRC})
+# same target name whether LNIT is installed (find_package) or built in-tree (add_subdirectory, FetchContent)
+add_library(LNIT::LNIT ALIAS LNIT)
 
 target_include_directories(LNIT
     PUBLIC

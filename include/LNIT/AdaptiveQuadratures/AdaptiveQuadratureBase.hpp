@@ -68,6 +68,25 @@ public:
 	template<class Function> constexpr std::pair<LongScalar, LongScalar> estimateIntegral(const Function& f, const Scalar& xmin, const Scalar& xmax) { return derived().estimateIntegralImpl(f, xmin, xmax); }
 
 	/**
+	 * @brief Estimate the integrals and errors of a vector-valued function on [xmin, xmax].
+	 * @tparam Function Callable with signature void f(const Scalar& x, std::span<LongScalar> values),
+	 *         which writes the integrals.size() components of the integrand at x into values.
+	 * @param f Function to integrate.
+	 * @param xmin Lower bound.
+	 * @param xmax Upper bound.
+	 * @param integrals Output: estimated integral of each component.
+	 * @param errors Output: estimated error of each component (same size as integrals).
+	 *
+	 * The integrand is evaluated once per node of the rule, whatever the number of components,
+	 * and each component goes through the same arithmetic as estimateIntegral(), so the
+	 * results are bitwise identical to one estimateIntegral() call per component.
+	 * This pays off when the components share an expensive factor, e.g. x^j exp(p(x)).
+	 *
+	 * @throw std::invalid_argument if integrals and errors do not have the same size.
+	 */
+	template<class Function> void estimateIntegrals(const Function& f, const Scalar& xmin, const Scalar& xmax, std::span<LongScalar> integrals, std::span<LongScalar> errors);
+
+	/**
 	 * @brief Perform adaptive quadrature on [xmin, xmax].
 	 * @tparam Function Callable with signature Scalar f(Scalar).
 	 * @param f Function to integrate.
@@ -176,6 +195,9 @@ public:
 private:
 	/// Forgets the previous integration: no interval, no iteration, not converged.
 	constexpr void resetState();
+
+	std::vector<Scalar>     m_nodeCache;  ///< nodes visited by the last estimateIntegrals() call, in the rule's order
+	std::vector<LongScalar> m_valueCache; ///< integrand values at m_nodeCache, node-major
 
 	std::vector<Interval>   m_intervals;
 	std::vector<LongScalar> m_subIntergrals;

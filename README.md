@@ -71,6 +71,35 @@ quad.setTol(1.0e-11); //
 const Scalar integral  = quad.integrate(mf_k);
 ```
 
+# Integrating several functions at once
+
+When several integrands share an expensive factor, for instance the moments $\int x^j e^{p(x)}\mathrm{d}x$ for $j = 0, \dots, J$, evaluating each of them separately recomputes that factor $J+1$ times. `estimateIntegrals` evaluates a vector-valued integrand once per node and returns the integral and error of each component. The results are bitwise identical to one `estimateIntegral` call per component.
+
+```cpp
+const auto f = [&p](const long double x, std::span<long double> values)
+{
+  const long double e = std::exp(p(x));
+  long double xj = 1;
+  for (auto& v : values) { v = xj*e; xj *= x; }
+};
+
+LNIT::ClenshawCurtisHybridAdaptiveQuadrature<long double, long double> quad;
+std::vector<long double> I(J + 1), err(J + 1);
+quad.estimateIntegrals(f, a, b, std::span(I), std::span(err));
+```
+
+`integrateVector` (in `LNIT/VectorAdaptiveIntegration.hpp`) builds a globally adaptive integration on top of it. The caller provides the initial mesh; the interval with the largest error relative to $\int |f_j|$ is bisected until the estimated error of every component is below `relativeTol` times $\int |f_j|$. An optional callback gives the roundoff level of each interval: errors below it are not refined any further, but they are added to the reported error.
+
+```cpp
+const std::vector<std::pair<long double, long double>> mesh{{a, m}, {m, b}}; // e.g. a breakpoint at a known peak
+LNIT::VectorIntegrationOptions<long double> options;
+options.relativeTol = 1e-13L;
+const auto result = LNIT::integrateVector(quad, f, J + 1, std::span(mesh), options);
+// result.integrals, result.absIntegrals, result.errors, result.intervals, result.converged
+```
+
+No adaptive driver can find a feature that none of the nodes of the initial mesh sees: a narrow peak inside a wide interval can be missed entirely, with a zero error estimate. Put breakpoints at the known features of the integrand.
+
 # Addaptive quadratures over an infinite interval
 
 Addaptives quadratures cannnot be directly used to integrate over $\mathbb{R}$. However, one can:
