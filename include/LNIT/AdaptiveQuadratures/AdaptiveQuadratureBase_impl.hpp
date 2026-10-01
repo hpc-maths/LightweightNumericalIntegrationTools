@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <ranges>
 #include <cmath>
+#include <stdexcept>
+#include <tuple>
 
 #include <fmt/core.h>
 
@@ -34,6 +36,49 @@ constexpr void AdaptiveQuadratureBase<Derived>::resetState()
 	m_intervals.clear();
 	m_subIntergrals.clear();
 	m_subIntergralsErr.clear();
+}
+
+template<class Derived> template<class Function>
+void AdaptiveQuadratureBase<Derived>::estimateIntegrals(const Function& f, const Scalar& xmin, const Scalar& xmax, std::span<LongScalar> integrals, std::span<LongScalar> errors)
+{
+	using std::abs;
+	using std::max;
+
+	if (integrals.size() != errors.size()) { throw std::invalid_argument("LNIT::estimateIntegrals: integrals and errors must have the same size"); }
+	const std::size_t nComponents = integrals.size();
+	if (nComponents == 0) { return; }
+
+	// First component: the rule visits its nodes, the whole vector is evaluated and cached at each of them.
+	m_nodeCache.clear();
+	m_valueCache.clear();
+	const auto record = [&](const Scalar& x) -> LongScalar
+	{
+		const std::size_t offset = m_valueCache.size();
+		m_nodeCache.push_back(x);
+		m_valueCache.resize(offset + nComponents);
+		f(x, std::span<LongScalar>(m_valueCache.data() + offset, nComponents));
+		return m_valueCache[offset];
+	};
+	std::tie(integrals[0], errors[0]) = estimateIntegral(record, xmin, xmax);
+
+	// Other components: the rule visits the same nodes in the same order, the cached values are replayed.
+	// The node check tolerates a few ulps, since the node formula may be contracted differently
+	// from one instantiation to the other (FMA).
+	const Scalar nodeTol = Scalar(8)*NumTraits<Scalar>::epsilon*max(abs(xmin), abs(xmax));
+	for (std::size_t j = 1; j < nComponents; ++j)
+	{
+		std::size_t node = 0;
+		const auto replay = [&](const Scalar& x) -> LongScalar
+		{
+			if (node >= m_nodeCache.size() or abs(x - m_nodeCache[node]) > nodeTol)
+			{
+				throw std::logic_error("LNIT::estimateIntegrals: the rule must visit the same nodes in the same order on every call");
+			}
+			return m_valueCache[(node++)*nComponents + j];
+		};
+		std::tie(integrals[j], errors[j]) = estimateIntegral(replay, xmin, xmax);
+		if (node != m_nodeCache.size()) { throw std::logic_error("LNIT::estimateIntegrals: the rule must visit the same nodes on every call"); }
+	}
 }
 
 template<class Derived> template<class Function> 
