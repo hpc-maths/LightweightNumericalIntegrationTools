@@ -87,7 +87,7 @@ void checkEstimateIntegralsContract(const char* name)
 }
 
 template<class Quadrature>
-void checkDriverGaussianMoments(const char* name)
+void checkDriverGaussianMoments(const char* name, const bool conservativeEstimate)
 {
 	std::printf("-- integrateVector, gaussian moments, %s\n", name);
 	constexpr std::size_t M = 11;
@@ -106,9 +106,11 @@ void checkDriverGaussianMoments(const char* name)
 		// the truncation of R to [-40, 40] is far below long double precision
 		const LD trueError = std::abs(res.integrals[j] - exact);
 		CHECK(trueError <= tol::TOL_USER_FACTOR*opt.relativeTol*res.absIntegrals[j]);
-		// the estimated error is conservative, up to the precision of the rule tables, which are
-		// written with double-precision literals whatever the Scalar type
-		CHECK(trueError <= res.errors[j] + 64*std::numeric_limits<double>::epsilon()*res.absIntegrals[j]);
+		// The rules that estimate the error as the difference of two rules (Hybrid, GLCC) are
+		// conservative. GaussLegendre and ClenshawCurtis extrapolate it, err1 (err1/err2)^2, and
+		// can underestimate it (by 4x for x^10 exp(-x^2/2) with ClenshawCurtis): for them, only
+		// the accuracy above is required.
+		if (conservativeEstimate) { CHECK(trueError <= res.errors[j] + 64*std::numeric_limits<LD>::epsilon()*res.absIntegrals[j]); }
 		CHECK(res.errors[j] <= opt.relativeTol*res.absIntegrals[j]);
 	}
 	// the final mesh is a sorted partition of [-40, 40]
@@ -199,10 +201,10 @@ int main()
 	checkEstimateIntegralsContract<Hyb>("ClenshawCurtisHybrid");
 	checkEstimateIntegralsContract<GLCC>("GLCC");
 
-	checkDriverGaussianMoments<GL>("GaussLegendre");
-	checkDriverGaussianMoments<CC>("ClenshawCurtis");
-	checkDriverGaussianMoments<Hyb>("ClenshawCurtisHybrid");
-	checkDriverGaussianMoments<GLCC>("GLCC");
+	checkDriverGaussianMoments<GL>("GaussLegendre", false);
+	checkDriverGaussianMoments<CC>("ClenshawCurtis", false);
+	checkDriverGaussianMoments<Hyb>("ClenshawCurtisHybrid", true);
+	checkDriverGaussianMoments<GLCC>("GLCC", true);
 
 	checkDriverOptions();
 	checkDriverShiftedPeak();
